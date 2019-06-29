@@ -20,38 +20,34 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
     Description: AMI that you want to deploy. Default is the latest version of Amazon Linux2.
-#	SSH Key for the EC2 Instance. This is only needed for troubleshooting.
   SSHKeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: SSH Key for the EC2 Instance
     ConstraintDescription: REQUIRED
-# Public IP Address for securing access to instance
+#Network Configuration
   ClientIPCIDR:
     Type: String
     Default: 0.0.0.0/0
     Description: CIDR IP to be granted access by the SG, use 0.0.0.0/0 to accept all IPs.
-# Route53 ZoneId
   Route53zoneId:
     Type: String
     Description: Route 53 ZoneId for the domain you will associate with the server. Leave blank if you do not wish to use a DNS Nme for your VPN Server.
   DomainName:
     Type: String
     Description: Your DNS Address for your VPN Server.
-# Availability zone for the subnet where the EC2 instance will be created.
   SubnetAZ:
     Type: AWS::EC2::AvailabilityZone::Name
     Description: Availability Zone where your VPN will be located.
-#Setting up our environmental variables
-  VPNIPSECPSK:
+#Setting up our VPN
+  VPNIPSecPSK:
     Type: String
     Description: Your PreShared Key for your IPSec VPN. Input into your VPN Client.
-  VPNUSER:
+  VPNUser:
     Type: String
     Description: Username for your VPN account.
-  VPNPASSWORD:
+  VPNPassword:
     Type: String
     Description: Password for your VPN account
-
 #Advanced Settings
   DNSServ01:
     Type: String
@@ -69,7 +65,7 @@ Parameters:
     Description: Passwords for additional VPN accounts. Separate by spaces. Leave blank for none.
   CreateDefaultSSHSecurityGroup:
     Type: String
-    Description: Do you want to create a default security group allowing SSH from your VPN Server? Attach this group to other instances in your VPC to secure port 22 traffic. Default is no.
+    Description: Do you want to create a default security group allowing SSH from your VPN Server? Attach this group to other instances in your VPC to allow port 22 traffic. Default is no.
     Default: No
     AllowedValues:
       - Yes
@@ -77,77 +73,75 @@ Parameters:
 
 
 Metadata:
-AWS::CloudFormation::Interface:
-ParameterGroups:
-  -
-    Label:
-      Default: "EC2 Configuration"
-    Parameters:
-      - EC2InstanceType
-      - AmiId
-      - SSHKeyName
-  -
-    Label:
-      Default: "Network Configuration"
-    Parameters:
-      - Route53zoneId
-      - DomainName
-      - ClientIPCIDR
-      - SubnetAZ
- -
-    Label:
-      Default: "VPN Configuration"
-    Paramaters:
-      - VPNIPSECPSK
-      - VPNUSER
-      - VPNPASSWORD
--
-    Label:
-      Default: "Advanced Configuration"
-    Parameters:
-      - DNSServ01
-      - DNSServ02
-      - VPNAdditionalUserNames
-      - VPNAdditionalUserNames
-      - CreateDefaultSSHSecurityGroup
-
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "EC2 Configuration"
+        Parameters:
+          - EC2InstanceType
+          - AmiId
+          - SSHKeyName
+      -
+        Label:
+          default: "Network Configuration"
+        Parameters:
+          - Route53zoneId
+          - DomainName
+          - ClientIPCIDR
+          - SubnetAZ
+      -
+        Label:
+          default: "VPN Configuration"
+        Parameters:
+          - VPNIPSecPSK
+          - VPNUser
+          - VPNPassword
+      -
+        Label:
+          default: "Advanced Configuration"
+        Parameters:
+          - DNSServ01
+          - DNSServ02
+          - VPNAdditionalUserNames
+          - VPNAdditionalPasswords
+          - CreateDefaultSSHSecurityGroup
 # Readable names for the paramaters.
-ParameterLabels:
+    ParameterLabels:
 #EC2 Configuration
-  EC2InstanceType:
-    Default: "EC2 Instance Type"
-  AmiId:
-    Default: "AMI"
-  SSHKeyName:
-    Default: "SSH Key Pair Name"
-
+      EC2InstanceType:
+        default: "EC2 Instance Type"
+      AmiId:
+        default: "AMI"
+      SSHKeyName:
+        default: "SSH Key Pair Name"
 #Network Configuration
-  Route53zoneId:
-    Default: "Route 53 Zone ID"
-  ClientIPCIDR:
-    Default: "Client CIDR"
-  DomainName:
-    Default: "Domain Name"
-  SubnetAZ:
-    Default: "Availability Zone"
+      Route53zoneId:
+        default: "Route 53 Zone ID"
+      ClientIPCIDR:
+        default: "Client CIDR"
+      DomainName:
+        default: "Domain Name"
+      SubnetAZ:
+        default: "Availability Zone"
 #VPN Configuration
-  VPNIPSECPSK:
-    Default: "VPN PreShared Key"
-  VPNUSER:
-    Default: "VPN Username"
-  VPNPASSWORD:
-    Default: "VPN Password"
+      VPNIPSecPSK:
+        default: "VPN PreShared Key"
+      VPNUser:
+        default: "VPN Username"
+      VPNPassword:
+        default: "VPN Password"
 #Advanced Configuration
-  VPNAdditionalUserNames:
-    Default: "Additional VPN Usernames"
-  VPNAdditionalPasswords:
-    Default: "Additional VPN Passwords"
-  DNSServ01:
-    Default: "Primary DNS Server Address"
-  DNSServ02:
-    Default: "Secondary DNS Server Address"
-  CreateDefaultSSHSecurityGroup:
-    Default: "Create Default SSH Security Group?"
+      VPNAdditionalUserNames:
+        default: "Additional VPN Usernames"
+      VPNAdditionalPasswords:
+        default: "Additional VPN Passwords"
+      DNSServ01:
+        default: "Primary DNS Server Address"
+      DNSServ02:
+        default: "Secondary DNS Server Address"
+      CreateDefaultSSHSecurityGroup:
+        default: "Create Default SSH Security Group?"
 
 Conditions:
   AdditionalUsersExist: !And
@@ -247,10 +241,6 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
-      Tags:
-        -
-          Key: Name
-          Value: IPSec Server Elastic IP
 #Mapping our network interface to the Elastic IP we requested
   EIPAssociation:
     Type: AWS::EC2::EIPAssociation
@@ -321,49 +311,61 @@ Resources:
           ToPort: 22
     Condition: CreateSSHSG
 
+  myEBSVolume:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Snapshot
+    Properties:
+      AvailabilityZone: !Ref SubnetAZ
+      Encrypted: true
+      VolumeType: gp2
+      Size: 10
+      Tags:
+        -
+          Key: Name
+          Value: IPSec_EBS
 
-
-IPSecServerInstance:
-  Type: AWS::EC2::Instance
-  DependsOn:
-    - ElasticIp
-    - IPSecServerSecurityGroup
-  Properties:
-    AvailabilityZone: !Ref SubnetAZ
-    ImageId: !Ref AmiId
-    InstanceType: !Ref EC2InstanceType
-    Volumes:
-    -
-      VolumeId: !Ref EBSVolume
-      Device: /dev/sdh
-    SubnetId: !Ref AutoPublicSubnet
-    SourceDestCheck: False
-    KeyName: !Ref SSHKeyName
-    SecurityGroupIds:
-      - !Ref SecurityGroup
-    NetworkInterfaces:
+  IPSecServerInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - ElasticIp
+      - IPSecServerSecurityGroup
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref EC2InstanceType
+      Volumes:
       -
-        NetworkInterfaceId: !Ref myNetworkInterfacePrimary
-        DeviceIndex: 0
-  UserData:
-    "Fn::Base64":
-      !Sub |
-        #!/bin/bash
-        amazon-linux-extras install docker -y
-        yum install -y aws-cfn-bootstrap
-        yum update -y
-        service docker start
-        chkconfig docker on
-        /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource IPSecServerInstance --configsets IPSecCfg --region ${AWS::Region}
-        /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource IPSecServerInstance --region ${AWS::Region}
-Metadata:
-  AWS::CloudFormation::Init:
-    configSets:
+        VolumeId: !Ref myEBSVolume
+        Device: /dev/sdh
+      SourceDestCheck: False
+      KeyName: !Ref SSHKeyName
+      NetworkInterfaces:
+        -
+          NetworkInterfaceId: !Ref myNetworkInterface
+          DeviceIndex: 0
+      UserData:
+        "Fn::Base64":
+          !Sub |
+            #!/bin/bash
+            amazon-linux-extras install docker -y
+            yum install -y aws-cfn-bootstrap
+            yum update -y
+            service docker start
+            chkconfig docker on
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource IPSecServerInstance --configsets IPSecCfg --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource IPSecServerInstance --region ${AWS::Region}
+# The CloudFormation stack will wait to mark the IPSecServerInstance as CREATE_COMPLETE until we recieve a signal from the instance, or 10 minutes elapses.
+    CreationPolicy:
+      ResourceSignal:
+        Count: "1"
+        Timeout: PT10M
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
           IPSecCfg:
             - "mount_volume"
             - "build_environment"
             - "start_containers"
-# Mount EBS Volume and format it.
+  # Mount EBS Volume and format it.
         mount_volume:
           commands:
             01_format_mount:
@@ -372,34 +374,34 @@ Metadata:
               command: "mkdir /mnt/dockershare"
             03_mount_volume:
               command: "mount /dev/sdh /mnt/dockershare"
-#We create our environment file
+  #We create our environment file
         build_environment:
           commands:
             01_create_primary_IPSec_folder:
               command: "mkdir /mnt/dockershare/IPSec"
             02_create_environment_file:
-                command: !Sub "echo 'VPN_IPSEC_PSK=${VPNIPSECPSK}' > /mnt/dockershare/IPSec/vpn.env
+                command: !Sub "echo 'VPN_IPSEC_PSK=${VPNIPSecPSK}' > /mnt/dockershare/IPSec/vpn.env"
             03_add_vpn_user:
-                command: !Sub "sed -i '$a VPN_USER=${VPNUSER}' /mnt/dockershare/IPSec/vpn.env"
+                command: !Sub "sed -i '$a VPN_USER=${VPNUser}' /mnt/dockershare/IPSec/vpn.env"
             04_add_vpn_pass:
-                command: !Sub "sed -i '$a VPN_PASSWORD=${VPNPASSWORD}' /mnt/dockershare/IPSec/vpn.env"
+                command: !Sub "sed -i '$a VPN_PASSWORD=${VPNPassword}' /mnt/dockershare/IPSec/vpn.env"
             05_add_additional_users:
-                command: !Sub !If [AdditionalUsersExist, "sed -i '$a VPN_ADDL_USERS=${VPNAdditionalUserNames}' /mnt/dockershare/IPSec/vpn.env"
+              command: !If [AdditionalUsersExist, !Sub "sed -i '$a VPN_ADDL_USERS=${VPNAdditionalUserNames}' /mnt/dockershare/IPSec/vpn.env", echo "No Additional Usernames"]
             06_add_additional_passwords:
-                command: !Sub !If [AdditionalUsersExist, "sed -i '$a VPN_ADDL_PASSWORDS=${VPNAdditionalPasswords}' /mnt/dockershare/IPSec/vpn.env"
+                command: !If [AdditionalUsersExist, !Sub "sed -i '$a VPN_ADDL_PASSWORDS=${VPNAdditionalPasswords}' /mnt/dockershare/IPSec/vpn.env", echo "No Additional Passwords"]
             07_add_primary_DNS_server:
-                command: !Sub "sed -a '$a VPN_DNS_SRV1=${DNSServ01}' /mnt/dockershare/IPSec/vpn.env"
+                command: !Sub "sed -i '$a VPN_DNS_SRV1=${DNSServ01}' /mnt/dockershare/IPSec/vpn.env"
             08_add_secondary_DNS_Server:
-                command: !sub "sed -a '$a VPN_DNS_SRV2=${DNSServ02}' /mnt/dockershare/IPSec/vpn.env"
+                command: !Sub "sed -i '$a VPN_DNS_SRV2=${DNSServ02}' /mnt/dockershare/IPSec/vpn.env"
         start_containers:
           commands:
             01_create_bridge:
-              #This creates gives us 2 IP addresses, all we need. Increase if you need to add additionl docker containers to this docker network.
-              command: "docker network create -d bridge --subnet 172.21.0.0/30 ipsec"
+              #This creates gives us 16 IP addresses in a /28,  we only need two. Increase if you need to add additionl docker containers to this docker network.
+              command: "docker network create -d bridge --subnet 172.21.0.0/28 ipsec"
             02_run_IPSec:
-              command: "docker run -d --network=ipsec --ip=172.21.0.1 -p 500:500/udp -p 4500:4500/udp -v "/mnt/dockershare/vpn.env:opt/src/vpn.env:ro" --name ipsec-vpn-server --restart always --privileged hwds/ip-sec-vpn-server"
+              command: "docker run -d --network=ipsec --ip=172.21.0.2 -p 500:500/udp -p 4500:4500/udp -v '/mnt/dockershare/vpn.env:/opt/src/vpn.env:ro' --name ipsec-vpn-server --restart=always --privileged hwdsl2/ipsec-vpn-server"
             03_run_watchtower:
-              command: "docker run -d --network=ipsec --ip=172.21.0.2 --name watchtower -v /var/run/docker.sock:/var/run/docker.sock --restart=unless-stopped v2tec/watchtower --cleanup -s \"0 0 * * 1\""
+              command: "docker run -d --network=ipsec --ip=172.21.0.3 --name watchtower -v '/var/run/docker.sock:/var/run/docker.sock' --restart=unless-stopped v2tec/watchtower --cleanup -s \"0 0 * * 1\""
 
 
 Outputs:
