@@ -1,20 +1,12 @@
-# http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-services-us-west-2.html#w1ab2c21c45c15c15
-# Amazon EC2 instance in a security group Creates an Amazon EC2 instance in an Amazon EC2 security group.
----
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample:
-  Create an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based
-  on the region in which the stack is run. This example creates an EC2 security group
-  for the instance to give you SSH access. **WARNING** This template creates an Amazon
-  EC2 instance. You will be billed for the AWS resources used if you create a stack
-  from this template.'
+Description: 'AWS CloudFormation Template that creates an IPSec VPN Server on EC2 in docker with WatchTower to monitor image changes'
 
 Parameters:
 #EC2 Configuration
   EC2InstanceType:
     Type: String
     Default: t3.nano
-    Description: The default is the cheapest option. If you are in the 12 month free teir then a t2.micro may be more cost effective
+    Description: The default is the cheapest option. If you are in the 12 month free tier then a t2.micro may be more cost effective
 # OS Image
   AmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
@@ -147,9 +139,6 @@ Conditions:
   AdditionalUsersExist: !And
     - !Not [!Equals [!Ref VPNAdditionalUserNames, ""]]
     - !Not [!Equals [!Ref VPNAdditionalPasswords, ""]]
-  NoAdditionalUsers: !And
-    - !Equals [!Ref VPNAdditionalUserNames, ""]
-    - !Equals [!Ref VPNAdditionalPasswords, ""]
   RegisterDomainName: !And
     - !Not [!Equals [!Ref Route53zoneId, ""]]
     - !Not [!Equals [!Ref DomainName, ""]]
@@ -295,6 +284,11 @@ Resources:
           IpProtocol: udp
           FromPort: 1701
           ToPort: 1701
+        - CidrIp: !Ref ClientIPCIDR
+          Description: Allow SSH for troubleshooting
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
 #Sample SG to attach to other Instances in your VPC to allow SSH traffic from your IPSec VPN Server. Don't forget to use your instances' Private IP when connecting via SSH!
   IPSecSSHSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -399,7 +393,7 @@ Resources:
               #This creates gives us 16 IP addresses in a /28,  we only need two. Increase if you need to add additionl docker containers to this docker network.
               command: "docker network create -d bridge --subnet 172.21.0.0/28 ipsec"
             02_run_IPSec:
-              command: "docker run -d --network=ipsec --ip=172.21.0.2 -p 500:500/udp -p 4500:4500/udp -v '/mnt/dockershare/vpn.env:/opt/src/vpn.env:ro' --name ipsec-vpn-server --restart=always --privileged hwdsl2/ipsec-vpn-server"
+              command: "docker run -d --privileged --network=ipsec --ip=172.21.0.2 -p 500:500/udp -p 4500:4500/udp -v '/mnt/dockershare/IPSec/vpn.env:/opt/src/vpn.env:ro' --name ipsec-vpn-server --restart=always hwdsl2/ipsec-vpn-server"
             03_run_watchtower:
               command: "docker run -d --network=ipsec --ip=172.21.0.3 --name watchtower -v '/var/run/docker.sock:/var/run/docker.sock' --restart=unless-stopped v2tec/watchtower --cleanup -s \"0 0 * * 1\""
 
