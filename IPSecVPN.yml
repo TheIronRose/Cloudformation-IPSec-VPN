@@ -1,0 +1,411 @@
+# http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-services-us-west-2.html#w1ab2c21c45c15c15
+# Amazon EC2 instance in a security group Creates an Amazon EC2 instance in an Amazon EC2 security group.
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample:
+  Create an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based
+  on the region in which the stack is run. This example creates an EC2 security group
+  for the instance to give you SSH access. **WARNING** This template creates an Amazon
+  EC2 instance. You will be billed for the AWS resources used if you create a stack
+  from this template.'
+
+Parameters:
+#EC2 Configuration
+  EC2InstanceType:
+    Type: String
+    Default: t3.nano
+    Description: The default is the cheapest option. If you are in the 12 month free teir then a t2.micro may be more cost effective
+# OS Image
+  AmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: AMI that you want to deploy. Default is the latest version of Amazon Linux2.
+#	SSH Key for the EC2 Instance. This is only needed for troubleshooting.
+  SSHKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH Key for the EC2 Instance
+    ConstraintDescription: REQUIRED
+# Public IP Address for securing access to instance
+  ClientIPCIDR:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: CIDR IP to be granted access by the SG, use 0.0.0.0/0 to accept all IPs.
+# Route53 ZoneId
+  Route53zoneId:
+    Type: String
+    Description: Route 53 ZoneId for the domain you will associate with the server. Leave blank if you do not wish to use a DNS Nme for your VPN Server.
+  DomainName:
+    Type: String
+    Description: Your DNS Address for your VPN Server.
+# Availability zone for the subnet where the EC2 instance will be created.
+  SubnetAZ:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Description: Availability Zone where your VPN will be located.
+#Setting up our environmental variables
+  VPNIPSECPSK:
+    Type: String
+    Description: Your PreShared Key for your IPSec VPN. Input into your VPN Client.
+  VPNUSER:
+    Type: String
+    Description: Username for your VPN account.
+  VPNPASSWORD:
+    Type: String
+    Description: Password for your VPN account
+
+#Advanced Settings
+  DNSServ01:
+    Type: String
+    Description: IP address for your DNS servers, default is Cloudflare.
+    Default: 1.1.1.1
+  DNSServ02:
+    Type: String
+    Description: IP address for your secondary DNS server, default is Cloudflare.
+    Default: 1.0.0.1
+  VPNAdditionalUserNames:
+    Type: String
+    Description: Usernames for additional VPN accounts. Separate by spaces. Leave blank for none.
+  VPNAdditionalPasswords:
+    Type: String
+    Description: Passwords for additional VPN accounts. Separate by spaces. Leave blank for none.
+  CreateDefaultSSHSecurityGroup:
+    Type: String
+    Description: Do you want to create a default security group allowing SSH from your VPN Server? Attach this group to other instances in your VPC to secure port 22 traffic. Default is no.
+    Default: No
+    AllowedValues:
+      - Yes
+      - No
+
+
+Metadata:
+AWS::CloudFormation::Interface:
+ParameterGroups:
+  -
+    Label:
+      Default: "EC2 Configuration"
+    Parameters:
+      - EC2InstanceType
+      - AmiId
+      - SSHKeyName
+  -
+    Label:
+      Default: "Network Configuration"
+    Parameters:
+      - Route53zoneId
+      - DomainName
+      - ClientIPCIDR
+      - SubnetAZ
+ -
+    Label:
+      Default: "VPN Configuration"
+    Paramaters:
+      - VPNIPSECPSK
+      - VPNUSER
+      - VPNPASSWORD
+-
+    Label:
+      Default: "Advanced Configuration"
+    Parameters:
+      - DNSServ01
+      - DNSServ02
+      - VPNAdditionalUserNames
+      - VPNAdditionalUserNames
+      - CreateDefaultSSHSecurityGroup
+
+# Readable names for the paramaters.
+ParameterLabels:
+#EC2 Configuration
+  EC2InstanceType:
+    Default: "EC2 Instance Type"
+  AmiId:
+    Default: "AMI"
+  SSHKeyName:
+    Default: "SSH Key Pair Name"
+
+#Network Configuration
+  Route53zoneId:
+    Default: "Route 53 Zone ID"
+  ClientIPCIDR:
+    Default: "Client CIDR"
+  DomainName:
+    Default: "Domain Name"
+  SubnetAZ:
+    Default: "Availability Zone"
+#VPN Configuration
+  VPNIPSECPSK:
+    Default: "VPN PreShared Key"
+  VPNUSER:
+    Default: "VPN Username"
+  VPNPASSWORD:
+    Default: "VPN Password"
+#Advanced Configuration
+  VPNAdditionalUserNames:
+    Default: "Additional VPN Usernames"
+  VPNAdditionalPasswords:
+    Default: "Additional VPN Passwords"
+  DNSServ01:
+    Default: "Primary DNS Server Address"
+  DNSServ02:
+    Default: "Secondary DNS Server Address"
+  CreateDefaultSSHSecurityGroup:
+    Default: "Create Default SSH Security Group?"
+
+Conditions:
+  AdditionalUsersExist: !And
+    - !Not [!Equals [!Ref VPNAdditionalUserNames, ""]]
+    - !Not [!Equals [!Ref VPNAdditionalPasswords, ""]]
+  NoAdditionalUsers: !And
+    - !Equals [!Ref VPNAdditionalUserNames, ""]
+    - !Equals [!Ref VPNAdditionalPasswords, ""]
+  RegisterDomainName: !And
+    - !Not [!Equals [!Ref Route53zoneId, ""]]
+    - !Not [!Equals [!Ref DomainName, ""]]
+  CreateSSHSG: !Equals [!Ref CreateDefaultSSHSecurityGroup, "Yes"]
+
+Resources:
+#Creates a VPC with the CIDR Block 10.0.0.0/16
+  AutoVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      InstanceTenancy: default
+      Tags:
+        -
+          Key: Name
+          Value: IPSec VPC
+#Creates the internet gateway to allow communication between the VPC and the public internet
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        -
+          Key: Name
+          Value: IPSec Internet Gateway
+ #attaches the internet gateway to the VpcId
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref AutoVpc
+  Ipv6VPCCidrBlock:
+    Type: AWS::EC2::VPCCidrBlock
+    DependsOn: AutoVpc
+    Properties:
+      AmazonProvidedIpv6CidrBlock: true
+      VpcId: !Ref AutoVpc
+#Creates a public subnet in the VPC, instances in this subnet recieve a public IPv4 address
+  AutoPublicSubnet:
+    Type: AWS::EC2::Subnet
+    DependsOn: AutoVpc
+    Properties:
+      VpcId: !Ref AutoVpc
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Ref SubnetAZ
+      Tags:
+        -
+          Key: Name
+          Value: IPSec Server Public Subnet
+# Only 2 IP addresses are needed and /28 is the smallest supported size permitted. This gives us 16 IP addresses (14 usable)
+      CidrBlock: 10.0.0.0/28
+#Creates a route table for our VPC
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AutoVpc
+      Tags:
+        -
+          Key: Name
+          Value: IPSec Route Table
+#Specifies the route and targets our internet gateway
+  Route:
+    Type: AWS::EC2::Route
+    Properties:
+    #Inbound rule: traffic to any IP address is routed to the internet gateway; open inbound rule
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTable
+#Associates the route table with our Subnet
+  RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref AutoPublicSubnet
+#Creating our network interfaces with Source/Destination Checking disabled
+  myNetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref AutoPublicSubnet
+      Description: Public Interface for the IPSec Server
+      GroupSet:
+      - !Ref IPSecServerSecurityGroup
+      SourceDestCheck: false
+      Tags:
+        -
+          Key: Name
+          Value: IPSec Server ENI
+#Associates an elastic IP with our AWS account for our VPN server
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        -
+          Key: Name
+          Value: IPSec Server Elastic IP
+#Mapping our network interface to the Elastic IP we requested
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ElasticIp.AllocationId
+      NetworkInterfaceId: !Ref myNetworkInterface
+
+#This only occurs if you are using a domain
+
+#Maps a DNS name for the IPSec Server if RegisterDomainName is true. Conditions keep us from writing empty rercord sets if DomainName or HostedZoneId oesn't exist.
+  myDNSRecord:
+    Type: AWS::Route53::RecordSet
+    DependsOn: ElasticIp
+    Properties:
+      HostedZoneId: !Ref Route53zoneId
+      Comment: DNS name for the IPSec Server.
+      Name: !Ref DomainName
+      Type: A
+      TTL: '900'
+      ResourceRecords:
+      - !Ref ElasticIp
+    Condition: RegisterDomainName
+#Security Groups with IPSec are tricky. We first need to create a security group that allows IPSec traffic to our IPSec Gateway.
+#Since we are configuring the server via cfn init and userdata and want to achieve statelessness, we don't allow SSH. You should recreate the docker container with appropriate settings.
+#EC2 only allows for TCP/UDP and ICMP traffic to and from instances. This means that both IPSec’s ESP and AH headers (as many other protocols) are blocked by the network infrastructure.
+#The only way to get IPSec to work in this environment is to use the encapsulation model, which sends IPSec packets over UDP.
+#If you want to get road warriors to work with your IPsec gateway you need to be aware that EC2 is fully NATed per region.
+#This will create challenges for Windows machines, because the default IPsec policy on the standard Windows client does not allow connecting to an IPsec server that resides behind NAT.
+#You need to edit the Windows registry to support this (note that this is a Windows-only challenge, a NATed gateway will work fine with OSX and Linux clients).
+#EC2 Security Groups: To get IPSec to work you’ll still need to open on the Gateway few UDP ports to the public internet (or to a specific location you would like to access from).
+#The UDP ports are 4500 (IPsec/UDP), 500 (IKE) and 1701 (L2TP).
+  IPSecServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: AutoVpc
+    Properties:
+      GroupName: IPSec VPN Server SG
+      GroupDescription: specialized security group for our IPSec VPN server
+      VpcId: !Ref AutoVpc
+      SecurityGroupIngress:
+        - CidrIp: !Ref ClientIPCIDR
+          Description: Allows all traffic over port 4500/udp
+          IpProtocol: udp
+          FromPort: 4500
+          ToPort: 4500
+        - CidrIp: !Ref ClientIPCIDR
+          Description: Allow all traffic to port 500/udp
+          IpProtocol: udp
+          FromPort: 500
+          ToPort: 500
+        - CidrIp: !Ref ClientIPCIDR
+          Description: Allow all traffic to port 1701/udp
+          IpProtocol: udp
+          FromPort: 1701
+          ToPort: 1701
+#Sample SG to attach to other Instances in your VPC to allow SSH traffic from your IPSec VPN Server. Don't forget to use your instances' Private IP when connecting via SSH!
+  IPSecSSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: AutoVpc
+    Properties:
+      GroupName: SSH Traffic
+      GroupDescription: specialized security group for pi-hole
+      VpcId: !Ref AutoVpc
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref IPSecServerSecurityGroup
+          Description: Allows all traffic over port 22
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+    Condition: CreateSSHSG
+
+
+
+IPSecServerInstance:
+  Type: AWS::EC2::Instance
+  DependsOn:
+    - ElasticIp
+    - IPSecServerSecurityGroup
+  Properties:
+    AvailabilityZone: !Ref SubnetAZ
+    ImageId: !Ref AmiId
+    InstanceType: !Ref EC2InstanceType
+    Volumes:
+    -
+      VolumeId: !Ref EBSVolume
+      Device: /dev/sdh
+    SubnetId: !Ref AutoPublicSubnet
+    SourceDestCheck: False
+    KeyName: !Ref SSHKeyName
+    SecurityGroupIds:
+      - !Ref SecurityGroup
+    NetworkInterfaces:
+      -
+        NetworkInterfaceId: !Ref myNetworkInterfacePrimary
+        DeviceIndex: 0
+  UserData:
+    "Fn::Base64":
+      !Sub |
+        #!/bin/bash
+        amazon-linux-extras install docker -y
+        yum install -y aws-cfn-bootstrap
+        yum update -y
+        service docker start
+        chkconfig docker on
+        /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource IPSecServerInstance --configsets IPSecCfg --region ${AWS::Region}
+        /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource IPSecServerInstance --region ${AWS::Region}
+Metadata:
+  AWS::CloudFormation::Init:
+    configSets:
+          IPSecCfg:
+            - "mount_volume"
+            - "build_environment"
+            - "start_containers"
+# Mount EBS Volume and format it.
+        mount_volume:
+          commands:
+            01_format_mount:
+              command: "mkfs -t ext4 /dev/sdh"
+            02_make_mount_folder:
+              command: "mkdir /mnt/dockershare"
+            03_mount_volume:
+              command: "mount /dev/sdh /mnt/dockershare"
+#We create our environment file
+        build_environment:
+          commands:
+            01_create_primary_IPSec_folder:
+              command: "mkdir /mnt/dockershare/IPSec"
+            02_create_environment_file:
+                command: !Sub "echo 'VPN_IPSEC_PSK=${VPNIPSECPSK}' > /mnt/dockershare/IPSec/vpn.env
+            03_add_vpn_user:
+                command: !Sub "sed -i '$a VPN_USER=${VPNUSER}' /mnt/dockershare/IPSec/vpn.env"
+            04_add_vpn_pass:
+                command: !Sub "sed -i '$a VPN_PASSWORD=${VPNPASSWORD}' /mnt/dockershare/IPSec/vpn.env"
+            05_add_additional_users:
+                command: !Sub !If [AdditionalUsersExist, "sed -i '$a VPN_ADDL_USERS=${VPNAdditionalUserNames}' /mnt/dockershare/IPSec/vpn.env"
+            06_add_additional_passwords:
+                command: !Sub !If [AdditionalUsersExist, "sed -i '$a VPN_ADDL_PASSWORDS=${VPNAdditionalPasswords}' /mnt/dockershare/IPSec/vpn.env"
+            07_add_primary_DNS_server:
+                command: !Sub "sed -a '$a VPN_DNS_SRV1=${DNSServ01}' /mnt/dockershare/IPSec/vpn.env"
+            08_add_secondary_DNS_Server:
+                command: !sub "sed -a '$a VPN_DNS_SRV2=${DNSServ02}' /mnt/dockershare/IPSec/vpn.env"
+        start_containers:
+          commands:
+            01_create_bridge:
+              #This creates gives us 2 IP addresses, all we need. Increase if you need to add additionl docker containers to this docker network.
+              command: "docker network create -d bridge --subnet 172.21.0.0/30 ipsec"
+            02_run_IPSec:
+              command: "docker run -d --network=ipsec --ip=172.21.0.1 -p 500:500/udp -p 4500:4500/udp -v "/mnt/dockershare/vpn.env:opt/src/vpn.env:ro" --name ipsec-vpn-server --restart always --privileged hwds/ip-sec-vpn-server"
+            03_run_watchtower:
+              command: "docker run -d --network=ipsec --ip=172.21.0.2 --name watchtower -v /var/run/docker.sock:/var/run/docker.sock --restart=unless-stopped v2tec/watchtower --cleanup -s \"0 0 * * 1\""
+
+
+Outputs:
+  IPSecServerPublicIP:
+    Description: The Public IP address for our VPNServer. Use when configuring your client. You cannot SSH into this instance! WatchTower will handle image updates.
+    Value:
+      Fn::GetAtt:
+      - IPSecServerInstance
+      - PublicIp
