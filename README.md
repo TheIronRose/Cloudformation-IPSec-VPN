@@ -30,15 +30,12 @@ Based on the DevOps theory of infrastructure as code, this AWS CloudFormation te
 
 This project is a CloudFormation template coded in YAML. I’m leveraging the following AWS services:
 
-<<<<<<< HEAD
-<a href="https://aws.amazon.com/cloudformation/"><img src="./images/CloudFormation.png" width="120"></a> <a href="https://aws.amazon.com/route53/"><img src="./images/Route53.png" width="120"></a><a href="https://aws.amazon.com/vpc/"><img src="./images/VPC.png" width="120"></a>
-<a href="https://aws.amazon.com/ec2/"><img src="./images/EC2.png" width="120"></a> <a href="https://aws.amazon.com/iam/"><img src="./images/IAM.png" width="120"></a> <a href="https://aws.amazon.com/ebs/"><img src="./images/EBS.png" width="120"></a>
-
-=======
 <a href="https://aws.amazon.com/cloudformation/"><img src="./images/CloudFormation.png" width="120"></a> <a href="https://aws.amazon.com/route53/"><img src="./images/Route53.png" width="120"></a>
-<a href="https://aws.amazon.com/vpc/"><img src="./images/VPC.png" width="120"></a> <a href="https://aws.amazon.com/ec2/"><img src="./images/EC2.png" width="120"></a>
-<a href="https://aws.amazon.com/iam/"><img src="./images/IAM.png" width="120"></a> <a href="https://aws.amazon.com/ebs/"><img src="./images/EBS.png" width="120"></a>
->>>>>>> 951cf1ec6034d40b088b2b99fa0fcce59e61b407
+<a href="https://aws.amazon.com/vpc/"><img src="./images/VPC.png" width="120"></a>
+
+<a href="https://aws.amazon.com/ec2/"><img src="./images/EC2.png" width="120"></a> <a href="https://aws.amazon.com/iam/"><img src="./images/IAM.png" width="120"></a>
+<a href="https://aws.amazon.com/ebs/"><img src="./images/EBS.png" width="120"></a>
+
 <a href="https://www.docker.com/"><img src="./images/docker.png" width="120" align="left"></a>
 <br><br>
 Docker containers are used for ease of management. This modular environment allows for complex systems to be rapidly deployed in a consistent manner.
