@@ -6,7 +6,6 @@
 
 1. [Project Outline](#Outline)
     - [Key Technologies](#Technologies)
-    - [A Note About Open Resolvers](#Resolver)
 2. [Installation](#Installation)
     - [Before You Begin](#Begin)
     - [Running the Template](#Run)
@@ -19,7 +18,7 @@
 <a name="Outline"></a>
 ## Project Outline
 
-This project is for a CloudFormation template that automates the creation of a DNS server. It uses docker to deploy an IPSec VPN Server in a docker container on EC2 with both IPsec/L2tP and Cisco IPSec behind WatchTower. Can be used for securing your cloud infrastructure, privacy, geolocation overrides, etc. Not designed for organizations but works with multiple VPN user accounts for home use.
+This project is for a CloudFormation template that automates the creation of a DNS server. It uses docker to deploy an IPSec VPN Server in a docker container on EC2 with both IPsec/L2tP and Cisco IPSec behind WatchTower. Can be used for securing your cloud infrastructure, privacy, geolocation overrides, etc. Not designed for organizations but works with multiple VPN user accounts for home use. You can use this CloudFormation template as a basis for automating and securing your entire deployment infrastructure.
 
 Based on the DevOps theory of infrastructure as code, this AWS CloudFormation template is an automated and portable process that anybody can run. The stack is fully automated and persistent which means that everything is created at run time and all configurations are saved so it can be reused for redeployment.
 
