@@ -1,8 +1,5 @@
 # Cloudformation-IPSec-VPN
 
-[**&raquo; See also: Docker IPsec VPN Server on Ubuntu, Debian and CentOS**](https://github.com/hwdsl2/docker-ipsec-vpn-server)
-[**&raquo; See also: IPsec VPN Server on Ubuntu, Debian and CentOS**](https://github.com/hwdsl2/setup-ipsec-vpn)
-
 <a href="https://aws.amazon.com/cloudformation/"><img src="./images/CloudFormation_old.png" width="240"></a>
 
 ## Table of contents
@@ -32,9 +29,10 @@ Based on the DevOps theory of infrastructure as code, this AWS CloudFormation te
 <a href="https://aws.amazon.com/"><img src="./images/aws.png" width="120"></a>
 
 This project is a CloudFormation template coded in YAML. I’m leveraging the following AWS services:
-<a href="https://aws.amazon.com/cloudformation/"><img src="./images/CloudFormation.png" width="120"></a> <a href="https://aws.amazon.com/route53/"><img src="./images/Route53.png" width="120"></a>
-<a href="https://aws.amazon.com/vpc/"><img src="./images/VPC.png" width="120"></a> <a href="https://aws.amazon.com/ec2/"><img src="./images/EC2.png" width="120"></a>
-<a href="https://aws.amazon.com/iam/"><img src="./images/IAM.png" width="120"></a> <a href="https://aws.amazon.com/ebs/"><img src="./images/EBS.png" width="120"></a>
+
+<a href="https://aws.amazon.com/cloudformation/"><img src="./images/CloudFormation.png" width="120"></a> <a href="https://aws.amazon.com/route53/"><img src="./images/Route53.png" width="120"></a><a href="https://aws.amazon.com/vpc/"><img src="./images/VPC.png" width="120"></a>
+<a href="https://aws.amazon.com/ec2/"><img src="./images/EC2.png" width="120"></a> <a href="https://aws.amazon.com/iam/"><img src="./images/IAM.png" width="120"></a> <a href="https://aws.amazon.com/ebs/"><img src="./images/EBS.png" width="120"></a>
+
 <a href="https://www.docker.com/"><img src="./images/docker.png" width="120" align="left"></a>
 <br><br>
 Docker containers are used for ease of management. This modular environment allows for complex systems to be rapidly deployed in a consistent manner.
@@ -153,9 +151,9 @@ These are the parameters used by the stack. Some are optional depending on your 
 <a name="Reference"></a>
 ## Reference
 
-I'm using the following docker images and repositories in this project:
-- [hwdsl2/ipsec-vpn-server](https://github.com/hwdsl2/docker-ipsec-vpn-server))
-- [v2tec/watchtower/](https://hub.docker.com/r/v2tec/watchtower/)
+I'm using the following docker images in this project:
+- [hwdsl2/ipsec-vpn-server](https://github.com/hwdsl2/docker-ipsec-vpn-server)
+- [v2tec/watchtower](https://hub.docker.com/r/v2tec/watchtower/)
 
 I found a number of valuable sources when researching this project:
 - Much of the readme.md formatting comes from [CloudEric/dnsvpn-cloudformation](https://github.com/CloudEric/dnsvpn-cloudformation), and I first learned CloudFormation syntax from his scripts. It also inspired me to containerize everything.
@@ -165,7 +163,7 @@ I found a number of valuable sources when researching this project:
 ## License
 
 Copyright (C) 2019 [Sara Angel Murphy](https://www.linkedin.com/in/saraangelmurphy) [![View my profile on LinkedIn](https://static.licdn.com/scds/common/u/img/webpromo/btn_viewmy_160x25.png)](https://www.linkedin.com/in/saraangelmurphy)
-Based on [the work of Lin Song](https://github.com/hwdsl2/ipsec-vpn-server) (Copyright 2016-2019)
+Based on [the work of Lin Song](https://github.com/hwdsl2/setup-ipsec-vpn) (Copyright 2016-2019)
 
 This work is licensed under the [Creative Commons Attribution-ShareAlike 3.0 Unported License](http://creativecommons.org/licenses/by-sa/3.0/)   
 Attribution required: please include my name in any derivative and let me know how you have improved it!
